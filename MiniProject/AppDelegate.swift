@@ -15,6 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         let window = UIWindow(frame: UIScreen.main.bounds)
         let navController = UINavigationController()
+        navController.navigationItem.backButtonTitle = ""
         
         // Initialize the Coordinator with the navigation controller
         let menuListCoordinator = MenuListCoordinator(navigationController: navController)

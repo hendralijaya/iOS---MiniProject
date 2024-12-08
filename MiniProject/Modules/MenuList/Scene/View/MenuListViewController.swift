@@ -62,7 +62,7 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
             
             self.menuItems = data
             self.categories = Array(Set(data.map { $0.strArea })).sorted()
-            self.activeCategories = Set(self.categories)
+            self.activeCategories = []
             self.addCategoryButtons()
             self.applyFilters()
         case .failed(let error):
@@ -72,7 +72,7 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
             let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default))
             self.present(alert, animated: true)
-        case .inProgress(progress: let progress):
+        case .inProgress(progress: _):
             break
         }
     }
@@ -94,7 +94,7 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     
     private func applyFilters() {
         if activeCategories.isEmpty {
-            filteredMenuItems = []
+            filteredMenuItems = menuItems
         } else {
             filteredMenuItems = menuItems.filter { activeCategories.contains($0.strArea) }
         }
@@ -107,16 +107,42 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
         searchBar.placeholder = "Search..."
         searchBar.delegate = self
         searchBar.translatesAutoresizingMaskIntoConstraints = false
-        
+
+        // Accessibility
+        searchBar.isAccessibilityElement = true
+        searchBar.accessibilityLabel = "Search bar"
+        searchBar.accessibilityHint = "Enter text to search for menu items."
+
+        if #available(iOS 13.0, *) {
+            searchBar.searchTextField.backgroundColor = UIColor { traitCollection in
+                traitCollection.userInterfaceStyle == .dark ? UIColor.systemGray6 : UIColor.white
+            }
+            searchBar.searchTextField.textColor = UIColor { traitCollection in
+                traitCollection.userInterfaceStyle == .dark ? UIColor.white : UIColor.black
+            }
+            searchBar.searchTextField.attributedPlaceholder = NSAttributedString(
+                string: "Search...",
+                attributes: [.foregroundColor: UIColor { traitCollection in
+                    traitCollection.userInterfaceStyle == .dark ? UIColor.lightGray : UIColor.darkGray
+                }]
+            )
+        } else {
+            searchBar.searchTextField.backgroundColor = UIColor.white
+            searchBar.searchTextField.textColor = UIColor.black
+            searchBar.searchTextField.attributedPlaceholder = NSAttributedString(
+                string: "Search...",
+                attributes: [.foregroundColor: UIColor.darkGray]
+            )
+        }
+
         self.view.addSubview(searchBar)
-        
+
         NSLayoutConstraint.activate([
             searchBar.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor),
             searchBar.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
             searchBar.trailingAnchor.constraint(equalTo: self.view.trailingAnchor)
         ])
-        
-        // Configure category buttons to appear below the search bar
+
         setupCategoryButtonsContainer(below: searchBar)
     }
     
@@ -163,13 +189,12 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
             button.contentEdgeInsets = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 20)
             button.addTarget(self, action: #selector(categoryButtonTapped(_:)), for: .touchUpInside)
             
-            if activeCategories.contains(category) {
-                button.isSelected = true
-                button.backgroundColor = .systemBlue
-            } else {
-                button.isSelected = false
-                button.backgroundColor = .clear
-            }
+            button.accessibilityLabel = category
+            button.accessibilityHint = "Filters the menu to show only \(category) items."
+            button.accessibilityTraits = .button
+            
+            button.isSelected = false
+            button.backgroundColor = .clear
             
             categoryButtons.append(button)
             stackView.addArrangedSubview(button)
@@ -179,7 +204,7 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     @objc private func categoryButtonTapped(_ sender: UIButton) {
         guard let category = sender.titleLabel?.text else { return }
         
-        if activeCategories.contains(category) {
+        if sender.isSelected {
             activeCategories.remove(category)
             sender.isSelected = false
             sender.backgroundColor = .clear
@@ -218,6 +243,16 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     }
     
     // MARK: - UICollectionViewDataSource
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let selectedItem = menuItems[indexPath.item]
+        let detailViewController = DetailMenuViewController()
+        detailViewController.configure(with: selectedItem)
+        navigationItem.backButtonTitle = ""
+        navigationController?.pushViewController(detailViewController, animated: true)
+        
+        UIAccessibility.post(notification: .announcement, argument: "Navigating to \(selectedItem.strMeal) details.")
+    }
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return filteredMenuItems.count
@@ -229,6 +264,11 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
         }
         let item = filteredMenuItems[indexPath.item]
         cell.configure(with: item)
+        
+        cell.isAccessibilityElement = true
+        cell.accessibilityLabel = item.strMeal
+        cell.accessibilityHint = "Double-tap to view details about \(item.strMeal)."
+        
         return cell
     }
 

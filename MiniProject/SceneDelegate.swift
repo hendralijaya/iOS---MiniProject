@@ -17,6 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         let window = UIWindow(windowScene: windowScene)
         let navController = UINavigationController()
+        navController.navigationItem.backButtonTitle = ""
         
         // Initialize the Coordinator with the navigation controller
         let menuListCoordinator = MenuListCoordinator(navigationController: navController)
