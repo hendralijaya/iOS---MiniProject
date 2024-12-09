@@ -7,12 +7,12 @@
 
 import Foundation
 
-enum NetworkFactory {
+public enum NetworkFactory {
     //MARK: - AUTH
     case getMenus(searchText: String)
 }
 
-extension NetworkFactory {
+public extension NetworkFactory {
     // MARK: URL PATH API
     var path: String {
         switch self {
@@ -88,7 +88,7 @@ extension NetworkFactory {
     // MARK: HEADER API
     var headers: [String: String]? {
         switch self {
-        case .getMenus(searchText: let searchText):
+        case .getMenus(searchText: _):
             return getHeaders(type: .authorized)
         }
     }

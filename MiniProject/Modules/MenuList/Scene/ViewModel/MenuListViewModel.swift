@@ -24,6 +24,13 @@ internal final class MenuListViewModel {
     
     class Output {
         @Published var result: DataState<[MenuModel]> = .initiate
+        
+        var isDataEmpty: Bool {
+            if case .success(let data) = result {
+                return data.isEmpty
+            }
+            return false
+        }
     }
     
     deinit {

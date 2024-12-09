@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-protocol NetworkerProtocol: AnyObject {
+public protocol NetworkerProtocol: AnyObject {
     func taskAsync<T>(type: T.Type,
                       endPoint: NetworkFactory,
                       isMultipart: Bool

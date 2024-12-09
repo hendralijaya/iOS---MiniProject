@@ -10,7 +10,7 @@ import Combine
 
 class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     
-    private var viewModel: MenuListViewModel!
+    private var viewModel: MenuListViewModel?
     private var cancellables = Set<AnyCancellable>()
     
     private var toast: LoadingToast?
@@ -32,6 +32,16 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     
     private var collectionView: UICollectionView!
     
+    private let noDataLabel: UILabel = {
+        let label = UILabel()
+        label.text = "No data available"
+        label.textAlignment = .center
+        label.textColor = .gray
+        label.font = .systemFont(ofSize: 18, weight: .medium)
+        label.isHidden = true
+        return label
+    }()
+    
     static func create(with viewModel: MenuListViewModel) -> MenuListViewController {
         let vc = MenuListViewController()
         vc.viewModel = viewModel
@@ -41,8 +51,10 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = "Choose Your Menu"
+        view.backgroundColor = .systemBackground
         setupSearchBar()
         setupCollectionView()
+        setupNoDataLabel()
         bindViewModel()
         didLoadPublisher.send(())
     }
@@ -50,6 +62,7 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     private func handleState(_ state: DataState<[MenuModel]>) {
         switch state {
         case .initiate, .loading:
+            noDataLabel.isHidden = true
             if toast == nil {
                 toast = LoadingToast()
                 toast?.setColor(foreground: .white, background: .black.withAlphaComponent(0.8))
@@ -65,10 +78,14 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
             self.activeCategories = []
             self.addCategoryButtons()
             self.applyFilters()
+            
+            noDataLabel.isHidden = !data.isEmpty
+            collectionView.isHidden = data.isEmpty
         case .failed(let error):
             toast?.hide()
             toast = nil
             
+            noDataLabel.isHidden = true
             let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default))
             self.present(alert, animated: true)
@@ -82,9 +99,9 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
             didLoad: didLoadPublisher.eraseToAnyPublisher(),
             searchText: searchTextSubject.eraseToAnyPublisher()
         )
-        viewModel.bind(input)
+        viewModel?.bind(input)
         
-        viewModel.output.$result
+        viewModel?.output.$result
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.handleState(state)
@@ -98,7 +115,11 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
         } else {
             filteredMenuItems = menuItems.filter { activeCategories.contains($0.strArea) }
         }
-        
+
+        // Update the visibility of the no data label
+        noDataLabel.isHidden = !filteredMenuItems.isEmpty
+        collectionView.isHidden = filteredMenuItems.isEmpty
+
         collectionView.reloadData()
     }
     
@@ -112,28 +133,6 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
         searchBar.isAccessibilityElement = true
         searchBar.accessibilityLabel = "Search bar"
         searchBar.accessibilityHint = "Enter text to search for menu items."
-
-        if #available(iOS 13.0, *) {
-            searchBar.searchTextField.backgroundColor = UIColor { traitCollection in
-                traitCollection.userInterfaceStyle == .dark ? UIColor.systemGray6 : UIColor.white
-            }
-            searchBar.searchTextField.textColor = UIColor { traitCollection in
-                traitCollection.userInterfaceStyle == .dark ? UIColor.white : UIColor.black
-            }
-            searchBar.searchTextField.attributedPlaceholder = NSAttributedString(
-                string: "Search...",
-                attributes: [.foregroundColor: UIColor { traitCollection in
-                    traitCollection.userInterfaceStyle == .dark ? UIColor.lightGray : UIColor.darkGray
-                }]
-            )
-        } else {
-            searchBar.searchTextField.backgroundColor = UIColor.white
-            searchBar.searchTextField.textColor = UIColor.black
-            searchBar.searchTextField.attributedPlaceholder = NSAttributedString(
-                string: "Search...",
-                attributes: [.foregroundColor: UIColor.darkGray]
-            )
-        }
 
         self.view.addSubview(searchBar)
 
@@ -186,7 +185,13 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
             button.layer.cornerRadius = 5
             button.layer.borderWidth = 1
             button.layer.borderColor = UIColor.systemBlue.cgColor
-            button.contentEdgeInsets = UIEdgeInsets(top: 0, left: 20, bottom: 0, right: 20)
+            
+           
+            
+            var configuration = UIButton.Configuration.plain()
+            configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20)
+            button.configuration = configuration
+
             button.addTarget(self, action: #selector(categoryButtonTapped(_:)), for: .touchUpInside)
             
             button.accessibilityLabel = category
@@ -217,6 +222,16 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
         applyFilters()
     }
     
+    private func setupNoDataLabel() {
+        noDataLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(noDataLabel)
+        
+        NSLayoutConstraint.activate([
+            noDataLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            noDataLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+    }
+    
     private func setupCollectionView() {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
@@ -245,7 +260,7 @@ class MenuListViewController: UIViewController, UISearchBarDelegate, UICollectio
     // MARK: - UICollectionViewDataSource
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let selectedItem = menuItems[indexPath.item]
+        let selectedItem = filteredMenuItems[indexPath.item]
         let detailViewController = DetailMenuViewController()
         detailViewController.configure(with: selectedItem)
         navigationItem.backButtonTitle = ""
