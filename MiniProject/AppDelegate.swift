@@ -13,7 +13,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var coordinator: MenuListCoordinator?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        configureKingfisherCache()
+        CacheImageManager.configureKingfisherCache()
         let window = UIWindow(frame: UIScreen.main.bounds)
         let navController = UINavigationController()
         navController.navigationItem.backButtonTitle = ""
