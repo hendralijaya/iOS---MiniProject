@@ -15,8 +15,22 @@ public final class MenuListCoordinator {
         self.navigationController = navigationController
     }
     
+    func test(
+        a: String,
+        b: String,
+        c: String
+    ) {
+        
+    }
     private func makeMenuListViewController() -> MenuListViewController {
         let menuService = MenuServicesImpl()
+        if true {
+            
+        } else {
+            
+        }
+        
+        
         let repository = makeMenuListRepository(menuService: menuService)
         let useCase = makeMenuListUseCase(
             repository: repository

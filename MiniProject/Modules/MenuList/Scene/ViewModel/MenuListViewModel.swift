@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-internal final class MenuListViewModel {
+final class MenuListViewModel {
     
     private let coordinator: MenuListCoordinator
     private let useCase: MenuListUseCase
